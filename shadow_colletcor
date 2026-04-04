@@ -1,0 +1,118 @@
+# "Shadow Colletcor"Python ile geliştirilen adli bilişim Triage aracı. Bilgisayarın mevcut durumunu anlık olarak detaylı şekilde tarayıp, sistem, registry, ağ bağlantıları ve kalıcılık izlerini otomatik olarak toplayan ve elde edilen tüm verileri bozulamaz, bütünlüğü korunmuş bir rapor olarak kaydeden profesyonel bir araçtır.
+import platform
+import os
+import getpass
+import winreg
+import socket
+import json
+import hashlib
+from datetime import datetime
+
+# 1. Aşama: Sistem Parmak İzi (Fingerprint)
+def sistem_ozeti():
+    return {
+        "isletim_sistemi": f"{platform.system()} {platform.release()}",
+        "kullanici_adi": getpass.getuser(),
+        "bilgisayar_adi": os.environ.get('COMPUTERNAME', 'Bilinmiyor'),
+        "sistem_versiyonu": platform.version()
+    }
+
+# 2. Aşama: Kayıt Defteri Analizi (Registry)
+def registry_analysis():
+    reg_path = r"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_path)
+        hidden_value, _ = winreg.QueryValueEx(key, "Hidden")
+        hidefileext_value, _ = winreg.QueryValueEx(key, "HideFileExt")
+        winreg.CloseKey(key)
+        return {
+            "Hidden_Status": "Gizli Dosyalar Gorunur" if hidden_value == 1 else "Gizli Dosyalar Sakli",
+            "HideFileExt_Status": "Uzantilar Sakli" if hidefileext_value == 1 else "Uzantilar Gorunur"
+        }
+    except PermissionError:
+        return {"Hata": "Yetki Yetersiz"}
+    except:
+        return {"Hata": "Registry Anahtarı Bulunamadı"}
+
+# 3. Aşama: Ağ Durumu Kontrolü (HTTP - Port 80)
+def internet_durumu():
+    # socket.create_connection hem DNS çözümlemesi yapar hem de TCP bağlantısı kurar
+    try:
+        # Google'a HTTP (80) üzerinden 2 saniye timeout ile bağlanmayı dene
+        socket.create_connection(("www.google.com", 80), timeout=2)
+        return "Baglanti Aktif (HTTP OK)"
+    except OSError:
+        return "Baglanti Yok/Kisitli (HTTP Fail)"
+
+# 4. Aşama: JSON Raporu Oluşturma
+def rapor_yaz(sistem, registry, network):
+    rapor_icerik = {
+        "analiz_zamani": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "sistem_bilgileri": sistem,
+        "registry_bulgulari": registry,
+        "ag_durumu": network
+    }
+    file_name = "evidence_report.json"
+    with open(file_name, "w", encoding="utf-8") as f:
+        json.dump(rapor_icerik, f, indent=4, ensure_ascii=False)
+    return file_name
+
+# 5. Aşama: Hash Hesaplama
+def hash_hesapla(dosya_yolu):
+    sha256_hash = hashlib.sha256()
+    with open(dosya_yolu, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+# --- ANA PROGRAM AKIŞI ---
+if __name__ == "__main__":
+    print("[*] Adli analiz ve veri toplama baslatildi...")
+    
+    # Verileri topla
+    s = sistem_ozeti()
+    r = registry_analysis()
+    n = internet_durumu()
+    
+    # Raporu oluştur
+    rapor_dosyasi = rapor_yaz(s, r, n)
+    
+    # Güncel Hash'i hesapla
+    su_anki_hash = hash_hesapla(rapor_dosyasi)
+    
+    # BÜTÜNLÜK KONTROLÜ
+    if os.path.exists("hash_verify.txt"):
+        with open("hash_verify.txt", "r") as f:
+            eski_hash = f.read().strip()
+        
+        if eski_hash == su_anki_hash:
+            print("[+] Bütünlük Doğrulandı: Dosya değişmemiş.")
+        else:
+            # Sessizce hata dosyası oluşturur (İstediğin mantık)
+            hata_dosyasi = "hash_integrity_failure.txt"
+            with open(hata_dosyasi, "w", encoding="utf-8") as f:
+                f.write(f"KRITIK: VERI MANIPULASYONU TESPIT EDILDI!\n")
+                f.write(f"Zaman: {datetime.now()}\n")
+                f.write(f"Orijinal Hash: {eski_hash}\n")
+                f.write(f"Yeni (Degismis) Hash: {su_anki_hash}\n")
+           # print(f"[!] UYARI: Eski kayıt ile fark bulundu! Detaylar
+           ####***** kod 97 başına yorum satırı konmadan çalışmadı ancak görevini yerine getiremedi*****####
+           # BÜTÜNLÜK KONTROLÜ (Tablodaki mantığın koda dökülmüş hali)
+    hash_dosyasi = "hash_verify.txt"
+    
+    if os.path.exists(hash_dosyasi): # Dosya var mı kontrol et (Hata almamak için)
+        with open(hash_dosyasi, "r", encoding="utf-8") as f:
+            eski_hash = f.read().strip()
+        
+        if eski_hash == su_anki_hash:
+            print("[+] Bütünlük Doğrulandı: Dosya değişmemiş.")
+        else:
+            # Burası senin "Biri kurcalarsa" dediğin kısım
+            with open("hash_integrity_failure.txt", "w", encoding="utf-8") as f:
+                f.write(f"DİKKAT: Veri değişikliği tespit edildi!\nEski: {eski_hash}\nYeni: {su_anki_hash}")
+            print("[!] UYARI: Hash farkı bulundu, log dosyası oluşturuldu.")
+    
+    # Her durumda mevcut hash'i kaydet ki bir sonraki kontrolde referans olsun
+    with open(hash_dosyasi, "w", encoding="utf-8") as f:
+        f.write(su_anki_hash)
+
