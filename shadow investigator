@@ -1,0 +1,185 @@
+#Shadow Investigator - Adli Bilişim Triage Aracı
+#Operasyon Adı: DİJİTAL GÖLGE (PROJECT DIGITAL SHADOW)
+#Geliştiren: [therturk35]
+#Tarih: 2026-02-18
+#Versiyon: 1.0
+#Yetki Seviyesi: Gizli / Eğitim Amaçlı
+#Amaç: Şüpheli sistemde hızlı triage yaparak delil toplamak ve bozulamaz rapor üretmek.
+import platform
+import socket
+import os
+import psutil
+import datetime
+import csv
+import hashlib
+import base64
+
+#aşama 1: system_fingerprint.py dosyasındaki sistem_ozeti() fonksiyonunu buraya kopyalayın ve çalıştır
+report = {}
+risks = []
+
+def sistem_ozeti():
+    print("--- ADLİ BİLİŞİM SİSTEM RAPORU ---")
+    print(f"İşletim Sistemi: {platform.system()} {platform.release()}")
+    print(f"Versiyon: {platform.version()}")
+    print(f"Mimari: {platform.machine()}")
+    print(f"Bilgisayar Adı: {platform.node()}")
+    print(f"Aktif Kullanıcı: {os.getlogin()}")
+    print(f"İşlemci: {platform.processor()}")
+sistem_ozeti()
+
+#aşama 2: process hunter() fonksiyonunu buraya kopyalayın ve çalıştır
+report = {}
+risks = []
+
+def process_izle(limit=10):
+    print(f"--- Canlı Sistem Analizi | {datetime.datetime.now()} ---\n")
+    print(f"{'PID':<8} | {'İsim':<25} | {'Durum':<12} | {'Bellek (MB)':<10}")
+    print("-" * 65)
+
+    
+    for proc in psutil.process_iter(['pid', 'name', 'status', 'memory_info']):
+        try:
+            info = proc.info
+            pid = info['pid']
+            name = info['name']
+            status = info['status']
+            memory = info['memory_info'].rss / (1024 * 1024)
+
+            if memory > 50: 
+                print(f"{pid:<8} | {name:<25} | {status:<12} | {memory:>10.2f} MB")
+                
+                if "temp" in proc.exe().lower():
+                    print(f" >> [KRİTİK UYARI] Bu işlem geçici klasörden (Temp) çalışıyor: {proc.exe()}")
+
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+process_izle()
+
+#aşama 3: magic number fonksiyonunu buraya kopyalayın ve çalıştır
+report = {}
+risks = []
+
+SIGNATURES = {
+    b'MZ': ('.exe', 'Executable'),
+    b'\x89PNG\r\n\x1a\n': ('.png', 'PNG Image'),
+    b'\xff\xd8\xff': ('.jpg', 'JPEG Image'),
+    b'%PDF-': ('.pdf', 'PDF Document'),
+}
+
+def toplu_sahtecilik_taramasi(klasor_yolu):
+    print(f"--- Tarama Başlatıldı: {klasor_yolu} ---\n")
+    print(f"{'Dosya Adı':<25} | {'Durum':<15}")
+    print("-" * 45)
+
+    for dosya in os.listdir(klasor_yolu):
+        yol = os.path.join(klasor_yolu, dosya)
+        if os.path.isfile(yol):
+            with open(yol, 'rb') as f:
+                header = f.read(8)
+                görünen_uzanti = os.path.splitext(dosya)[1].lower()
+                
+                tespit_edilen = "Bilinmiyor"
+                for imza, (gercek_uzanti, isim) in SIGNATURES.items():
+                    if header.startswith(imza):
+                        if görünen_uzanti != gercek_uzanti:
+                            tespit_edilen = f"SAHTE! (Aslında {isim})"
+                        else:
+                            tespit_edilen = "Güvenli"
+                        break
+                
+                print(f"{dosya[:25]:<25} | {tespit_edilen:<15}")
+
+toplu_sahtecilik_taramasi(r"C:\Users\Tuğçe Ertürk\Downloads")
+
+#aşama 4:timeline oluşturma fonksiyonunu buraya kopyalayın ve çalıştır
+report = {}
+risks = []
+
+def timeline_olustur(hedef_klasor):
+    print(f"--- Timeline (Zaman Çizelgesi) Oluşturuluyor: {hedef_klasor} ---")
+    
+    olaylar_listesi = []
+
+    for kok_dizin, klasorler, dosyalar in os.walk(hedef_klasor):
+        for dosya in dosyalar:
+            tam_yol = os.path.join(kok_dizin, dosya)
+            
+            try:
+                stat = os.stat(tam_yol)
+                olaylar_listesi.append({
+                    "zaman": stat.st_ctime,
+                    "tarih_str": datetime.datetime.fromtimestamp(stat.st_ctime).strftime('%Y-%m-%d %H:%M:%S'),
+                    "tur": "[+] CREATED ",
+                    "dosya": dosya
+                })
+                
+       
+                olaylar_listesi.append({
+                    "zaman": stat.st_mtime,
+                    "tarih_str": datetime.datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                    "tur": "[*] MODIFIED",
+                    "dosya": dosya
+                })
+                
+                
+            except Exception as e:
+                continue
+
+    olaylar_listesi.sort(key=lambda x: x['zaman'])
+
+    print(f"\n{'ZAMAN':<22} | {'OLAY TÜRÜ':<12} | {'DOSYA ADI'}")
+    print("-" * 60)
+
+    for olay in olaylar_listesi:
+        print(f"{olay['tarih_str']:<22} | {olay['tur']:<12} | {olay['dosya']}")
+
+    with open("timeline_raporu.csv", "w", newline='', encoding='utf-8') as f:
+        yazici = csv.writer(f)
+        yazici.writerow(["Zaman", "Olay Turu", "Dosya Adi"])
+        for olay in olaylar_listesi:
+            yazici.writerow([olay['tarih_str'], olay['tur'], olay['dosya']])
+            
+    print("\n[+] Timeline 'timeline_raporu.csv' olarak da kaydedildi.")
+
+
+timeline_olustur(".")
+
+#aşama 5:data recovery fonksiyonunu buraya kopyalayın ve çalıştır
+report = {}
+risks = []
+def silinmis_dosyalari_kurtar(hedef_klasor):
+    print(f"--- Silinmiş Dosyaları Kurtarma Denemesi: {hedef_klasor} ---")
+    
+    for kok_dizin, klasorler, dosyalar in os.walk(hedef_klasor):
+        for dosya in dosyalar:
+            tam_yol = os.path.join(kok_dizin, dosya)
+            if not os.path.exists(tam_yol):
+                print(f"Kurtarılmaya Çalışılan Dosya: {tam_yol}")
+                # Burada gerçek kurtarma kodları devreye girecektir (örneğin, Recuva API'si veya benzeri bir araç kullanarak)
+                # Bu sadece bir simülasyondur ve gerçek kurtarma işlemi için ek kodlar gereklidir.
+                print(f" -> [Simülasyon] '{dosya}' adlı dosya kurtarıldı!")
+silinmis_dosyalari_kurtar(".")
+
+
+#aşama 6: delil bütünlüğü kontrolü fonksiyonunu buraya kopyalayın ve çalıştır
+
+def delil_butunlugu_kontrolu(dosya_yolu):
+    print(f"--- Delil Bütünlüğü Kontrolü: {dosya_yolu} ---")
+    
+    if not os.path.exists(dosya_yolu):
+        print("Dosya bulunamadı!")
+        return
+    
+    hash_md5 = hashlib.md5()
+    hash_sha256 = hashlib.sha256()
+    
+    with open(dosya_yolu, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+            hash_sha256.update(chunk)
+    
+    print(f"MD5 Hash: {hash_md5.hexdigest()}")
+    print(f"SHA-256 Hash: {hash_sha256.hexdigest()}")
+    json_raporu_olustur(vaka_raporu)
+    print("\n[+] Delil bütünlüğü kontrolü tamamlandı ve rapor güncellendi.")    
