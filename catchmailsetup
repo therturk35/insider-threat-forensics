@@ -1,0 +1,24 @@
+# -------------------------------------------------
+# TEST SENARYOSU
+# -------------------------------------------------
+
+subject = "Yemek Siparişi"
+
+body = """
+Merhaba,
+
+Ek dosyada şirket verileri bulunmaktadır.
+Lütfen finans.xlsx dosyasını inceleyin.
+
+müşteri listesi müşteri listesi müşteri listesi
+müşteri listesi müşteri listesi müşteri listesi
+
+Gizli bilgiler içerir.
+"""
+
+header = """
+Received: from PC-MUHASEBE
+(192.168.1.45)
+by mail.company.com
+with ESMTP;
+"""
