@@ -1,0 +1,379 @@
+# Bu kodlama örneği, bir e-posta içeriğinde şüpheli başlıklar ve hassas veri kelimeleri arayarak potansiyel veri sızıntısı girişimlerini tespit etmeye çalışır. Risk skorunu hesaplayarak, kritik risk durumlarını kullanıcıya bildirir.
+#örnek bir e-posta başlığı ve içeriği üzerinden çalışır, ancak gerçek uygulamalarda bu fonksiyon daha geniş bir veri seti ve gelişmiş analiz teknikleri ile desteklenebilir.
+# Bu tür bir analiz, özellikle şirket içi e-posta trafiğinde veri sızıntısı risklerini azaltmak için kullanılabilir.
+# Not: Bu kod, gerçek bir e-posta analiz motorunun sadece basit bir örneğidir ve gerçek dünyada daha karmaşık algoritmalar ve veri setleri gerektirebilir.
+#Bu kodda "YEMEK SİPARŞİ", "MENÜ", "KARGO", "TATİL" ve "REZERVASYON" gibi şüpheli başlıklar aranır. Ayrıca, "ŞİRKET VERİLERİ", "MÜŞTERİ LİSTESİ", "FİNANS", "MAAŞ", "GİZLİ", "CONFIDENTIAL", "DATABASE", "EXCEL", ".XLSX", ".CSV" ve ".SQL" gibi hassas veri kelimeleri içerikte aranır. Risk skoru hesaplanarak, kritik risk durumları kullanıcıya bildirilir.
+
+
+import re
+from collections import Counter
+
+
+def detect_suspicious_email(subject, body, header):
+
+    print("=" * 50)
+    print("MAIL GÜVENLİK ANALİZİ BAŞLATILDI")
+    print("=" * 50)
+
+    risk_score = 0
+
+    # Şüpheli görünen ama masum başlıklar
+    suspicious_subjects = [
+        "yemek siparişi",
+        "menü",
+        "kargo",
+        "tatil",
+        "rezervasyon"
+    ]
+
+    # Hassas veri kelimeleri
+    sensitive_keywords = [
+        "şirket verileri",
+        "müşteri listesi",
+        "finans",
+        "maaş",
+        "gizli",
+        "confidential",
+        "database",
+        ".xlsx",
+        ".csv",
+        ".sql",
+        ".pdf"
+    ]
+
+    # -----------------------------------
+    # KONU ANALİZİ
+    # -----------------------------------
+
+    print("\n[1] KONU ANALİZİ")
+
+    if subject.lower() in suspicious_subjects:
+
+        print(f"Şüpheli konu bulundu: {subject}")
+
+        risk_score += 30
+
+    else:
+
+        print("Şüpheli konu bulunamadı.")
+
+    # -----------------------------------
+    # İÇERİK ANALİZİ
+    # -----------------------------------
+
+    print("\n[2] İÇERİK ANALİZİ")
+
+    found_keywords = []
+
+    for keyword in sensitive_keywords:
+
+        if keyword.lower() in body.lower():
+
+            found_keywords.append(keyword)
+
+            risk_score += 15
+
+    if found_keywords:
+
+        print("Hassas içerikler bulundu:")
+
+        for keyword in found_keywords:
+            print(f"- {keyword}")
+
+    else:
+
+        print("Hassas içerik bulunamadı.")
+
+    # -----------------------------------
+    # TEKRAR ANALİZİ
+    # -----------------------------------
+
+    print("\n[3] TEKRAR ANALİZİ")
+
+    words = re.findall(r'\b\w+\b', body.lower())
+
+    word_counts = Counter(words)
+
+    repetitive_words = [
+        word for word, count in word_counts.items()
+        if count > 5
+    ]
+
+    if repetitive_words:
+
+        print("Aşırı tekrar eden kelimeler:")
+
+        for word in repetitive_words:
+            print(f"- {word}: {word_counts[word]} kez")
+
+            risk_score += 5
+
+    else:
+
+        print("Şüpheli tekrar bulunamadı.")
+
+    # -----------------------------------
+    # HEADER ANALİZİ
+    # -----------------------------------
+
+    print("\n[4] HEADER ANALİZİ")
+
+    ip_addresses = re.findall(
+        r'(?:\d{1,3}\.){3}\d{1,3}',
+        header
+    )
+
+    hostnames = re.findall(
+        r'from\s+([A-Za-z0-9\-]+)',
+        header
+    )
+
+    if ip_addresses:
+
+        print("Bulunan IP adresleri:")
+
+        for ip in set(ip_addresses):
+            print(f"- {ip}")
+
+    else:
+
+        print("IP adresi bulunamadı.")
+
+    if hostnames:
+
+        print("\nBulunan cihaz isimleri:")
+
+        for host in set(hostnames):
+            print(f"- {host}")
+
+    else:
+
+        print("Cihaz adı bulunamadı.")
+
+    # -----------------------------------
+    # RİSK SONUCU
+    # -----------------------------------
+
+    print("\n[5] RİSK SONUCU")
+
+    print(f"Toplam risk skoru: {risk_score}")
+
+    if risk_score >= 50:
+
+        print("KRİTİK RİSK!")
+        print("Olası veri sızıntısı girişimi tespit edildi.")
+
+    elif risk_score >= 30:
+
+        print("ORTA RİSK!")
+        print("Mail manuel incelenmeli.")
+
+    else:
+
+        print("Düşük risk.")
+
+    print("\nAnaliz tamamlandı.")
+    print("=" * 50)
+
+
+# -------------------------------------------------
+# TEST SENARYOSU
+# -------------------------------------------------
+
+subject = "Yemek Siparişi"
+
+body = """
+Merhaba,
+
+Ek dosyada şirket verileri bulunmaktadır.
+Lütfen finans.xlsx dosyasını inceleyin.
+
+müşteri listesi müşteri listesi müşteri listesi
+müşteri listesi müşteri listesi müşteri listesi
+
+Gizli bilgiler içerir.
+"""
+
+header = """
+Received: from PC-MUHASEBE
+(192.168.1.45)
+by mail.company.com
+with ESMTP;
+"""
+
+# Sistemi çalıştır
+import re
+from collections import Counter
+
+
+def detect_suspicious_email(subject, body, header):
+
+    print("=" * 50)
+    print("MAIL GÜVENLİK ANALİZİ BAŞLATILDI")
+    print("=" * 50)
+
+    risk_score = 0
+
+    # Şüpheli görünen ama masum başlıklar
+    suspicious_subjects = [
+        "yemek siparişi",
+        "menü",
+        "kargo",
+        "tatil",
+        "rezervasyon"
+    ]
+
+    # Hassas veri kelimeleri
+    sensitive_keywords = [
+        "şirket verileri",
+        "müşteri listesi",
+        "finans",
+        "maaş",
+        "gizli",
+        "confidential",
+        "database",
+        ".xlsx",
+        ".csv",
+        ".sql",
+        ".pdf"
+    ]
+
+    # -----------------------------------
+    # KONU ANALİZİ
+    # -----------------------------------
+
+    print("\n[1] KONU ANALİZİ")
+
+    if subject.lower() in suspicious_subjects:
+
+        print(f"Şüpheli konu bulundu: {subject}")
+
+        risk_score += 30
+
+    else:
+
+        print("Şüpheli konu bulunamadı.")
+
+    # -----------------------------------
+    # İÇERİK ANALİZİ
+    # -----------------------------------
+
+    print("\n[2] İÇERİK ANALİZİ")
+
+    found_keywords = []
+
+    for keyword in sensitive_keywords:
+
+        if keyword.lower() in body.lower():
+
+            found_keywords.append(keyword)
+
+            risk_score += 15
+
+    if found_keywords:
+
+        print("Hassas içerikler bulundu:")
+
+        for keyword in found_keywords:
+            print(f"- {keyword}")
+
+    else:
+
+        print("Hassas içerik bulunamadı.")
+
+    # -----------------------------------
+    # TEKRAR ANALİZİ
+    # -----------------------------------
+
+    print("\n[3] TEKRAR ANALİZİ")
+
+    words = re.findall(r'\b\w+\b', body.lower())
+
+    word_counts = Counter(words)
+
+    repetitive_words = [
+        word for word, count in word_counts.items()
+        if count > 5
+    ]
+
+    if repetitive_words:
+
+        print("Aşırı tekrar eden kelimeler:")
+
+        for word in repetitive_words:
+            print(f"- {word}: {word_counts[word]} kez")
+
+            risk_score += 5
+
+    else:
+
+        print("Şüpheli tekrar bulunamadı.")
+
+    # -----------------------------------
+    # HEADER ANALİZİ
+    # -----------------------------------
+
+    print("\n[4] HEADER ANALİZİ")
+
+    ip_addresses = re.findall(
+        r'(?:\d{1,3}\.){3}\d{1,3}',
+        header
+    )
+
+    hostnames = re.findall(
+        r'from\s+([A-Za-z0-9\-]+)',
+        header
+    )
+
+    if ip_addresses:
+
+        print("Bulunan IP adresleri:")
+
+        for ip in set(ip_addresses):
+            print(f"- {ip}")
+
+    else:
+
+        print("IP adresi bulunamadı.")
+
+    if hostnames:
+
+        print("\nBulunan cihaz isimleri:")
+
+        for host in set(hostnames):
+            print(f"- {host}")
+
+    else:
+
+        print("Cihaz adı bulunamadı.")
+
+    # -----------------------------------
+    # RİSK SONUCU
+    # -----------------------------------
+
+    print("\n[5] RİSK SONUCU")
+
+    print(f"Toplam risk skoru: {risk_score}")
+
+    if risk_score >= 50:
+
+        print("KRİTİK RİSK!")
+        print("Olası veri sızıntısı girişimi tespit edildi.")
+
+    elif risk_score >= 30:
+
+        print("ORTA RİSK!")
+        print("Mail manuel incelenmeli.")
+
+    else:
+
+        print("Düşük risk.")
+
+    print("\nAnaliz tamamlandı.")
+    print("=" * 50)
+
+
+
+
+# Sistemi çalıştır
+detect_suspicious_email(subject, body, header)
